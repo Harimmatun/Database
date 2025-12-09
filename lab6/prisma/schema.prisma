@@ -1,0 +1,106 @@
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = "5"
+  interface            = "asyncio"
+  enable_experimental_decimal = true
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model addresses {
+  address_id  Int       @id @default(autoincrement())
+  customer_id Int
+  street      String    @db.VarChar(150)
+  city        String    @db.VarChar(50)
+  postal_code String    @db.VarChar(20)
+  country     String    @db.VarChar(50)
+  customers   customers @relation(fields: [customer_id], references: [customer_id], onDelete: Cascade, onUpdate: NoAction)
+  orders      orders[]
+}
+
+model brands {
+  brand_id Int        @id @default(autoincrement())
+  name     String     @unique @db.VarChar(100)
+  products products[]
+}
+
+model categories {
+  category_id Int        @id @default(autoincrement())
+  name        String     @unique @db.VarChar(100)
+  products    products[]
+}
+
+model customers {
+  customer_id   Int         @id @default(autoincrement())
+  first_name    String      @db.VarChar(50)
+  last_name     String      @db.VarChar(50)
+  email         String      @unique @db.VarChar(100)
+  password_hash String      @db.VarChar(255)
+  phone         String?     @db.VarChar(20)
+  addresses     addresses[]
+  orders        orders[]
+  reviews       reviews[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model order_items {
+  order_id          Int
+  product_id        Int
+  quantity          Int
+  price_at_purchase Decimal  @db.Decimal(10, 2)
+  orders            orders   @relation(fields: [order_id], references: [order_id], onDelete: Cascade, onUpdate: NoAction)
+  products          products @relation(fields: [product_id], references: [product_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([order_id, product_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model orders {
+  order_id            Int           @id @default(autoincrement())
+  customer_id         Int
+  shipping_address_id Int
+  order_date          DateTime?     @default(now()) @db.Timestamp(6)
+  status              String        @default("Pending") @db.VarChar(20)
+  total_amount        Decimal       @default(0.00) @db.Decimal(10, 2)
+  order_items         order_items[]
+  customers           customers     @relation(fields: [customer_id], references: [customer_id], onDelete: NoAction, onUpdate: NoAction)
+  addresses           addresses     @relation(fields: [shipping_address_id], references: [address_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model products {
+  product_id     Int           @id @default(autoincrement())
+  category_id    Int
+  brand_id       Int
+  name           String        @db.VarChar(150)
+  price          Decimal       @db.Decimal(10, 2)
+  stock_quantity Int           @default(0)
+  order_items    order_items[]
+  brands         brands        @relation(fields: [brand_id], references: [brand_id], onDelete: NoAction, onUpdate: NoAction)
+  categories     categories    @relation(fields: [category_id], references: [category_id], onDelete: NoAction, onUpdate: NoAction)
+  reviews        reviews[]
+  is_active       Boolean   @default(true)
+  supplier_id     Int?
+  Supplier        Supplier? @relation(fields: [supplier_id], references: [id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reviews {
+  review_id   Int       @id @default(autoincrement())
+  customer_id Int
+  product_id  Int
+  rating      Int
+  comment     String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  customers   customers @relation(fields: [customer_id], references: [customer_id], onDelete: NoAction, onUpdate: NoAction)
+  products    products  @relation(fields: [product_id], references: [product_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model Supplier {
+  id        Int        @id @default(autoincrement())
+  name      String
+  products  products[]
+}
